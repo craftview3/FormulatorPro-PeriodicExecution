@@ -29,13 +29,13 @@ jobs:
       
       - name: Build and Push Docker image
         run: |
-          docker build -t asia-northeast1-docker.pkg.dev/quiet-branch-474004-v6/cloudrun/pdf-processor:${{ github.sha }} .
-          docker push asia-northeast1-docker.pkg.dev/quiet-branch-474004-v6/cloudrun/pdf-processor:${{ github.sha }}
+          docker build -t asia-northeast1-docker.pkg.dev/quiet-branch-474004-v6/cloud-run-source-deploy/pdf-processor:${{ github.sha }} .
+          docker push asia-northeast1-docker.pkg.dev/quiet-branch-474004-v6/cloud-run-source-deploy/pdf-processor:${{ github.sha }}
       
       - name: Deploy Cloud Run Job
         run: |
           gcloud run jobs deploy pdf-processor-job \
-            --image=asia-northeast1-docker.pkg.dev/quiet-branch-474004-v6/cloudrun/pdf-processor:${{ github.sha }} \
+            --image=asia-northeast1-docker.pkg.dev/quiet-branch-474004-v6/cloud-run-source-deploy/pdf-processor:${{ github.sha }} \
             --region=asia-northeast1 \
             --project=quiet-branch-474004-v6 \
             --max-retries=3 \
