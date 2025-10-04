@@ -1,28 +1,42 @@
-name: Deploy to Cloud Run (hello)
+name: Deploy to Cloud Run Jobs
+
 on:
   push:
     branches: [ main ]
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    
     permissions:
       contents: read
       id-token: write
+    
     steps:
       - uses: actions/checkout@v4
+      
       - name: Auth (WIF)
         uses: google-github-actions/auth@v3
         with:
-          workload_identity_provider: projects/397245976541/locations/global/workloadIdentityPools/github-pool/providers/github
+          workload_identity_provider: projects/397245976541/locations/global/workloadIdentityPools/github-pool1/providers/github
           service_account: gha-deployer-129@quiet-branch-474004-v6.iam.gserviceaccount.com
-      - name: Deploy
-        id: deploy
-        uses: google-github-actions/deploy-cloudrun@v3
-        with:
-          project_id: quiet-branch-474004-v6
-          region: asia-northeast1
-          service: formulatorpro-periodicexecution
-          image: us-docker.pkg.dev/cloudrun/container/hello:latest
-          flags: '--allow-unauthenticated'
-      - name: Show URL
-        run: echo "URL=${{ steps.deploy.outputs.url }}"
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      
+      - name: Configure Docker
+        run: gcloud auth configure-docker asia-northeast1-docker.pkg.dev
+      
+      - name: Build and Push Docker image
+        run: |
+          docker build -t asia-northeast1-docker.pkg.dev/quiet-branch-474004-v6/cloudrun/pdf-processor:${{ github.sha }} .
+          docker push asia-northeast1-docker.pkg.dev/quiet-branch-474004-v6/cloudrun/pdf-processor:${{ github.sha }}
+      
+      - name: Deploy Cloud Run Job
+        run: |
+          gcloud run jobs deploy pdf-processor-job \
+            --image=asia-northeast1-docker.pkg.dev/quiet-branch-474004-v6/cloudrun/pdf-processor:${{ github.sha }} \
+            --region=asia-northeast1 \
+            --project=quiet-branch-474004-v6 \
+            --max-retries=3 \
+            --task-timeout=3600
