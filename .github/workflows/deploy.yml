@@ -23,6 +23,6 @@ jobs:
           region: asia-northeast1
           service: formulatorpro-periodicexecution
           image: us-docker.pkg.dev/cloudrun/container/hello:latest
-          allow_unauthenticated: true
+          flags: '--allow-unauthenticated'
       - name: Show URL
         run: echo "URL=${{ steps.deploy.outputs.url }}"
