@@ -11,7 +11,6 @@ USE_AUTO_PAGE_RANGE = False
 AUTO_START_PAGE = 2               # True のとき 2-最終 に自動化
 
 # Google スプレッドシート
-SERVICE_ACCOUNT_JSON = "./service_account.json"
 SPREADSHEET_ID = "1iHKZn9y-AZkeO9TUf0kN3_3GBIthwtTr4i19tNStg8U"
 APPEND_SHEET_TITLE = "更新情報一覧"  # 追記先シート名
 
@@ -271,12 +270,17 @@ def df_to_records(df: pd.DataFrame, pdf_url: str) -> List[Dict]:
 # ========= Google Sheets =========
 def connect_gspread():
     import gspread
+    from google.auth import default
+    
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive.readonly",
         "https://www.googleapis.com/auth/drive.file",
     ]
-    return gspread.service_account(filename=SERVICE_ACCOUNT_JSON, scopes=scopes)
+    
+    # Workload Identity を使用（サービスアカウントキー不要）
+    credentials, project = default(scopes=scopes)
+    return gspread.authorize(credentials)
 
 def open_or_create_worksheet(gc, spreadsheet_id: str, title: str):
     sh = gc.open_by_key(spreadsheet_id)
