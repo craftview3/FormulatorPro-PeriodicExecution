@@ -268,66 +268,8 @@ def df_to_records(df: pd.DataFrame, pdf_url: str) -> List[Dict]:
     return recs
 
 # ========= Google Sheets =========
-def connect_gspread():
-    import gspread
-    from google.auth import default
-    
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive.readonly",
-        "https://www.googleapis.com/auth/drive.file",
-    ]
-    
-    # Workload Identity を使用（サービスアカウントキー不要）
-    credentials, project = default(scopes=scopes)
-    return gspread.authorize(credentials)
-
-def open_or_create_worksheet(gc, spreadsheet_id: str, title: str):
-    sh = gc.open_by_key(spreadsheet_id)
-    try:
-        return sh.worksheet(title)
-    except Exception:
-        return sh.add_worksheet(title=title, rows=2000, cols=30)
-
-def first_empty_row(ws) -> int:
-    values = ws.get_all_values()
-    return len(values) + 1
-
-def record_to_row(rec: Dict, today_str: str) -> List:
-    """
-    スプレッドシート行データ作成
-    A:0, B:日付, C:0, D:seibunn, E:(空), F:ryou1, G:条件, H:ryou2, I:ryou3, J:ryou4, K:tanni, L:bikou,
-    M:(空), N:(空), O:url
-    """
-    seibun = rec.get("seibunn") or rec.get("seibun") or ""
-    return [
-        0,                           # A: 変更フラグ
-        today_str,                   # B: 今日の日付
-        0,                           # C: グループID
-        seibun,                      # D: 成分名
-        "",                          # E: 規制区分（空欄）
-        rec.get("ryou1", ""),        # F: 配合上限値（一般）
-        rec.get("条件", ""),         # G: 使用対象・条件（一般）
-        rec.get("ryou2", ""),        # H:非粘膜・洗い流す上限値
-        rec.get("ryou3", ""),        # I:非粘膜・洗い流さない上限値
-        rec.get("ryou4", ""),        # J:粘膜用上限値
-        rec.get("tanni", ""),        # K:単位
-        rec.get("bikou", ""),        # L: 備考
-        "",                          # M: 予備
-        "",                          # N: 予備
-        rec.get("url", ""),          # O: PDF URL
-    ]
-
-def append_records_to_sheet(ws, records: List[Dict]):
-    if not records:
-        print("[INFO] 追記対象なし。")
-        return
-    today_str = datetime.now().strftime("%Y/%m/%d")
-    rows = [record_to_row(r, today_str) for r in records]
-    start = first_empty_row(ws)
-    end = start + len(rows) - 1
-    ws.update(f"A{start}:O{end}", rows, value_input_option="USER_ENTERED")
-    print(f"[DONE] {len(rows)} 行を {ws.title}!A{start}:O{end} に追記しました。")
+# GCP関連の処理は別モジュールに分離
+from gcp import SheetsClient
 
 # ========= メイン =========
 def main():
@@ -368,9 +310,8 @@ def main():
 
     # 4) シートへ追記（O列にURLを書き込む）
     print("[INFO] Appending to Google Sheet ...")
-    gc = connect_gspread()
-    ws = open_or_create_worksheet(gc, SPREADSHEET_ID, APPEND_SHEET_TITLE)
-    append_records_to_sheet(ws, all_records)
+    sheets_client = SheetsClient()
+    sheets_client.append_records(SPREADSHEET_ID, APPEND_SHEET_TITLE, all_records, pdf_url)
 
     print("[DONE] 完了。")
 
